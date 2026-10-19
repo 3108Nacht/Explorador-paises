@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explorador de Países · Consumo de API</title>
+  <meta name="description" content="Portal web que consume las APIs públicas countries.dev y Open-Meteo usando fetch() en JavaScript.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+ 
+  <nav class="navbar navbar-expand-lg sticky-top border-bottom bg-body-tertiary">
+    <div class="container">
+      <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
+        <i class="bi bi-globe-americas text-info fs-4"></i> Explorador de Países
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu" aria-controls="menu" aria-expanded="false" aria-label="Menú">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="menu">
+        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+          <li class="nav-item"><a class="nav-link" href="#explorar">Explorar</a></li>
+          <li class="nav-item"><a class="nav-link" href="#laboratorio">Laboratorio</a></li>
+          <li class="nav-item"><a class="nav-link" href="#guia">Guía fetch()</a></li>
+          <li class="nav-item">
+            <button id="btnTema" class="btn btn-outline-secondary btn-sm" title="Cambiar tema">
+              <i class="bi bi-moon-stars"></i>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero py-5">
+    <div class="container py-lg-4">
+      <span class="badge rounded-pill text-bg-info mb-3">Diseño de Sistemas de Internet · Guía Frontend</span>
+      <h1 class="display-5 fw-bold">Conoce el mundo consumiendo <span class="text-gradiente">APIs REST</span></h1>
+      <p class="lead text-body-secondary col-lg-8 mt-3">
+        Este portal obtiene en tiempo real la información de 250 países desde
+        <a href="https://countries.dev" target="_blank" rel="noopener">countries.dev</a> y el clima actual de cada
+        capital desde <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, usando la API
+        nativa <code>fetch()</code> de JavaScript con <code>async/await</code> y Promesas.
+      </p>
+      <div class="d-flex flex-wrap gap-2 mt-4">
+        <a href="#explorar" class="btn btn-info btn-lg"><i class="bi bi-search me-1"></i> Explorar países</a>
+        <a href="#laboratorio" class="btn btn-outline-light btn-lg"><i class="bi bi-terminal me-1"></i> Laboratorio</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <section class="row g-3" aria-live="polite">
+      <div class="col-6 col-md-3">
+        <div class="card h-100 shadow-sm"><div class="card-body">
+          <div class="small text-uppercase text-body-secondary"><i class="bi bi-activity"></i> Estado HTTP</div>
+          <div class="fs-4 fw-bold font-monospace" id="mEstado">—</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card h-100 shadow-sm"><div class="card-body">
+          <div class="small text-uppercase text-body-secondary"><i class="bi bi-stopwatch"></i> Latencia</div>
+          <div class="fs-4 fw-bold font-monospace" id="mLatencia">—</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card h-100 shadow-sm"><div class="card-body">
+          <div class="small text-uppercase text-body-secondary"><i class="bi bi-filetype-json"></i> Content-Type</div>
+          <div class="fw-bold font-monospace small text-break mt-2" id="mTipo">—</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card h-100 shadow-sm"><div class="card-body">
+          <div class="small text-uppercase text-body-secondary"><i class="bi bi-database"></i> Registros</div>
+          <div class="fs-4 fw-bold font-monospace" id="mRegistros">—</div>
+        </div></div>
+      </div>
+      <div class="col-12">
+        <small class="text-body-secondary text-break">Último endpoint: <code id="mEndpoint">—</code></small>
+      </div>
+    </section>
+
+    <section id="explorar" class="pt-5">
+      <h2 class="fw-bold">Explorar países</h2>
+      <p class="text-body-secondary">Busca, filtra por región y ordena. Haz clic en una tarjeta para ver el detalle y el clima de su capital.</p>
+
+      <div class="row g-2 mb-3">
+        <div class="col-md-6">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input id="txtBuscar" type="search" class="form-control" placeholder="Buscar país o capital…" autocomplete="off">
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <select id="selRegion" class="form-select">
+            <option value="">Todas las regiones</option>
+            <option value="Americas">América</option>
+            <option value="Europe">Europa</option>
+            <option value="Asia">Asia</option>
+            <option value="Africa">África</option>
+            <option value="Oceania">Oceanía</option>
+            <option value="Polar">Polar</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3">
+          <select id="selOrden" class="form-select">
+            <option value="nombre">Nombre (A-Z)</option>
+            <option value="poblacion">Mayor población</option>
+            <option value="area">Mayor área</option>
+          </select>
+        </div>
+      </div>
+
+      <p id="resumen" class="small text-body-secondary"></p>
+
+
+      <div id="estado" class="text-center py-5">
+        <div class="spinner-border text-info" role="status"></div>
+        <p class="mt-3 text-body-secondary">Consultando la API de países…</p>
+      </div>
+
+      <div id="grid" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4"></div>
+
+      <div class="text-center mt-4">
+        <button id="btnMas" class="btn btn-outline-info" hidden><i class="bi bi-plus-circle me-1"></i> Cargar más países</button>
+      </div>
+    </section>
+
+
+    <section id="laboratorio" class="pt-5">
+      <h2 class="fw-bold">Laboratorio de peticiones</h2>
+      <p class="text-body-secondary">Consulta un país directamente al endpoint <code>/name/{nombre}</code> y elige el mecanismo de consumo.</p>
+
+      <form id="formLab" class="row g-2 mb-3">
+        <div class="col-md-6">
+          <input id="txtLab" type="text" class="form-control" value="nicaragua" placeholder="Ej: nicaragua, japan, brazil" required>
+        </div>
+        <div class="col-md-3">
+          <select id="selMetodo" class="form-select">
+            <option value="async">async / await</option>
+            <option value="then">Promesas .then() / .catch()</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-grid">
+          <button class="btn btn-info" type="submit"><i class="bi bi-send me-1"></i> Enviar petición GET</button>
+        </div>
+      </form>
+
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <ul class="nav nav-tabs card-header-tabs" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabResultado" type="button" role="tab"><i class="bi bi-card-text"></i> Resultado</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabJson" type="button" role="tab"><i class="bi bi-braces"></i> JSON</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCodigo" type="button" role="tab"><i class="bi bi-code-slash"></i> Código</button></li>
+          </ul>
+        </div>
+        <div class="card-body tab-content">
+          <div class="tab-pane fade show active" id="tabResultado" role="tabpanel">
+            <p class="text-body-secondary mb-0">Envía una petición para ver el resultado.</p>
+          </div>
+          <div class="tab-pane fade" id="tabJson" role="tabpanel">
+            <pre class="codigo mb-0"><code id="jsonCrudo">// Aquí aparecerá la respuesta JSON</code></pre>
+          </div>
+          <div class="tab-pane fade" id="tabCodigo" role="tabpanel">
+            <pre class="codigo mb-0"><code id="codigoUsado">// Aquí aparecerá el código ejecutado</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="guia" class="pt-5">
+      <h2 class="fw-bold">¿Cómo funciona el consumo?</h2>
+      <p class="text-body-secondary">Resumen de los mecanismos utilizados en este portal.</p>
+
+      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+        <div class="col"><div class="card h-100 paso"><div class="card-body">
+          <span class="paso-num">1</span>
+          <h5 class="card-title mt-2">Petición GET con fetch()</h5>
+          <p class="card-text text-body-secondary"><code>fetch(url)</code> devuelve una <em>Promesa</em> que se resuelve con un objeto <code>Response</code>.</p>
+        </div></div></div>
+        <div class="col"><div class="card h-100 paso"><div class="card-body">
+          <span class="paso-num">2</span>
+          <h5 class="card-title mt-2">Validar el estado</h5>
+          <p class="card-text text-body-secondary">Se revisa <code>respuesta.ok</code>; si el estado no es 2xx se lanza un <code>Error</code> controlado.</p>
+        </div></div></div>
+        <div class="col"><div class="card h-100 paso"><div class="card-body">
+          <span class="paso-num">3</span>
+          <h5 class="card-title mt-2">Convertir a JSON</h5>
+          <p class="card-text text-body-secondary"><code>await respuesta.json()</code> transforma el cuerpo de la respuesta en objetos de JavaScript.</p>
+        </div></div></div>
+        <div class="col"><div class="card h-100 paso"><div class="card-body">
+          <span class="paso-num">4</span>
+          <h5 class="card-title mt-2">Renderizar en el DOM</h5>
+          <p class="card-text text-body-secondary">Los datos se recorren con <code>map()</code>, <code>filter()</code> y <code>sort()</code> y se pintan como tarjetas de Bootstrap.</p>
+        </div></div></div>
+        <div class="col"><div class="card h-100 paso"><div class="card-body">
+          <span class="paso-num">5</span>
+          <h5 class="card-title mt-2">Encadenar servicios</h5>
+          <p class="card-text text-body-secondary">Con el nombre de la capital se consulta Open-Meteo: primero el <strong>geocoding</strong> y luego el <strong>clima</strong>.</p>
+        </div></div></div>
+        <div class="col"><div class="card h-100 paso"><div class="card-body">
+          <span class="paso-num">6</span>
+          <h5 class="card-title mt-2">Manejo de errores</h5>
+          <p class="card-text text-body-secondary"><code>try / catch</code> y <code>.catch()</code> muestran alertas amigables si falla la red o la API (por ejemplo, un 404).</p>
+        </div></div></div>
+      </div>
+
+      <div class="table-responsive mt-4">
+        <table class="table table-hover align-middle border">
+          <thead class="table-active">
+            <tr><th>API</th><th>Endpoint</th><th>Uso en el portal</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>countries.dev</td><td><code>GET /countries?fields=…</code></td><td>Listado general de países</td></tr>
+            <tr><td>countries.dev</td><td><code>GET /alpha/{código}</code></td><td>Detalle completo de un país</td></tr>
+            <tr><td>countries.dev</td><td><code>GET /name/{nombre}</code></td><td>Laboratorio de peticiones</td></tr>
+            <tr><td>Open-Meteo</td><td><code>GET /v1/search?name={capital}</code></td><td>Coordenadas de la capital</td></tr>
+            <tr><td>Open-Meteo</td><td><code>GET /v1/forecast?latitude=…&amp;longitude=…</code></td><td>Clima actual de la capital</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+
+  <div class="modal fade" id="modalDetalle" tabindex="-1" aria-labelledby="modalTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitulo">Detalle del país</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body" id="modalContenido"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <footer class="border-top mt-5 py-4 text-center small text-body-secondary">
+    <div class="container">
+      <p class="mb-1">Guía Frontend: Consumo de API · Diseño de Sistemas de Internet · 2026</p>
+      <p class="mb-0">Elaborado por <strong>Joel Oveth Arróliga Acevedo</strong> · Datos: countries.dev &amp; Open-Meteo</p>
+    </div>
+  </footer>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
